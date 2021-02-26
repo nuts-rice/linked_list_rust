@@ -1,0 +1,1 @@
+/home/mishkasistrunk/codeWork/rustWork/linked-list/target/debug/linked-list: /home/mishkasistrunk/codeWork/rustWork/linked-list/src/first.rs /home/mishkasistrunk/codeWork/rustWork/linked-list/src/main.rs /home/mishkasistrunk/codeWork/rustWork/linked-list/src/second.rs
