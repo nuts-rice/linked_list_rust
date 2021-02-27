@@ -4,6 +4,10 @@ pub struct List<T> {
     head: Link<T>,
 }
 
+pub struct Iter<'a, T> {
+    next: Option<&'a Node<T>>,
+}
+
 type Link<T> = Option<Rc<Node<T>>>;
 
 struct Node<T> {
@@ -35,6 +39,34 @@ impl<T> List<T> {
     pub fn head(&self) -> Option<&T> {
         self.head.as_ref().map(|node| &node.elem)
     }
+
+    pub fn iter(&self) -> Iter<'_, T> {
+        Iter {next: self.head.as_deref()}
+    }
+}
+
+impl <'a, T> Iterator for Iter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item>{
+        self.next.map(|node| {
+            self.next = node.next.as_deref();
+            &node.elem
+        })
+    }
+}
+
+impl<T> Drop for List<T> {
+    fn drop(&mut self) {
+        let mut head = self.head.take();
+        while let Some(node) = head {
+            if let Ok(mut node) = Rc::try_unwrap(node) {
+                head = node.next.take();
+            } else {
+                break;
+            }
+        }
+    }
 }
 
     #[cfg(test)]
@@ -60,5 +92,13 @@ impl<T> List<T> {
 
             let list = list.tail();
             assert_eq!(list.head(), None);
+        }
+
+        fn iter(){
+            let list = List::new().append(1).append(2).append(3);
+            let mut iter = list.iter();
+            assert_eq!(iter.next(), Some(&3));
+            assert_eq!(iter.next(), Some(&2));
+            assert_eq!(iter.next(), Some(&1));
         }
 }
