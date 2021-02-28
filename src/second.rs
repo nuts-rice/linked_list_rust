@@ -46,12 +46,14 @@ impl<T> List<T> {
     //Explicitly elided lifetime
     pub fn iter(&self) -> Iter<'_, T> {
         Iter {
-            next: self.head.as_deref()
+            next: self.head.as_deref(),
         }
     }
 
-    pub fn iter_mut(&mut self) -> IterMut<'_, T>{
-        IterMut {next: self.head.as_deref_mut()}
+    pub fn iter_mut(&mut self) -> IterMut<'_, T> {
+        IterMut {
+            next: self.head.as_deref_mut(),
+        }
     }
 }
 
@@ -103,15 +105,14 @@ pub struct IterMut<'a, T> {
 impl<'a, T> Iterator for IterMut<'a, T> {
     type Item = &'a mut T;
 
-
     // All numeric primitives in rust (i32, u64, bool, f32, char, etc...) are Copy. You can also declare any user-defined type to be Copy as well, as long as all its components are Copy.
 
-// Critically to why this code was working, shared references are also Copy! Because & is copy, Option<&> is also Copy. 
-// So when we did self.next.map it was fine because the Option was just copied. 
-// Now we can't do that, because &mut isn't Copy (if you copied an &mut, 
-// you'd have two &mut's to the same location in memory, 
-// // which is forbidden). 
-// Instead, we should properly take the Option to get it.
+    // Critically to why this code was working, shared references are also Copy! Because & is copy, Option<&> is also Copy.
+    // So when we did self.next.map it was fine because the Option was just copied.
+    // Now we can't do that, because &mut isn't Copy (if you copied an &mut,
+    // you'd have two &mut's to the same location in memory,
+    // // which is forbidden).
+    // Instead, we should properly take the Option to get it.
     fn next(&mut self) -> Option<Self::Item> {
         self.next.take().map(|node| {
             self.next = node.next.as_deref_mut();
@@ -120,7 +121,7 @@ impl<'a, T> Iterator for IterMut<'a, T> {
     }
 }
 
-// We take the Option<&mut> so we have exclusive access to the mutable reference. 
+// We take the Option<&mut> so we have exclusive access to the mutable reference.
 // No need to worry about someone looking at it again.
 
 #[cfg(test)]
@@ -183,7 +184,9 @@ mod test {
     #[test]
     fn iter() {
         let mut list = List::new();
-        list.push(1); list.push(2); list.push(3);
+        list.push(1);
+        list.push(2);
+        list.push(3);
 
         let mut iter = list.iter();
         assert_eq!(iter.next(), Some(&3));
@@ -194,7 +197,9 @@ mod test {
     #[test]
     fn iter_mut() {
         let mut list = List::new();
-        list.push(1); list.push(2); list.push(3);
+        list.push(1);
+        list.push(2);
+        list.push(3);
 
         let mut iter = list.iter_mut();
         assert_eq!(iter.next(), Some(&mut 3));

@@ -16,24 +16,28 @@ struct Node<T> {
 }
 
 impl<T> List<T> {
-    pub fn new() -> Self{
-        List{head: None}
+    pub fn new() -> Self {
+        List { head: None }
     }
     pub fn append(&self, elem: T) -> List<T> {
-        List {head: Some(Rc::new(Node {
-            elem: elem,
-            next: self.head.clone(),
-        }))}
+        List {
+            head: Some(Rc::new(Node {
+                elem: elem,
+                next: self.head.clone(),
+            })),
+        }
     }
 
-    //tail is the logical inverse of append operation. It takes a list and returns 
-    //the whole list with the first element removed. All that 
+    //tail is the logical inverse of append operation. It takes a list and returns
+    //the whole list with the first element removed. All that
     //is cloning the second element in the list (if it exists).
     pub fn tail(&self) -> List<T> {
         //Returning Option<T>
-        // Thankfully, this is another common Option pattern, 
+        // Thankfully, this is another common Option pattern,
         // and we can just use and_then to let us return an Option.
-        List {head: self.head.as_ref().and_then(|node| node.next.clone())}
+        List {
+            head: self.head.as_ref().and_then(|node| node.next.clone()),
+        }
     }
 
     pub fn head(&self) -> Option<&T> {
@@ -41,14 +45,16 @@ impl<T> List<T> {
     }
 
     pub fn iter(&self) -> Iter<'_, T> {
-        Iter {next: self.head.as_deref()}
+        Iter {
+            next: self.head.as_deref(),
+        }
     }
 }
 
-impl <'a, T> Iterator for Iter<'a, T> {
+impl<'a, T> Iterator for Iter<'a, T> {
     type Item = &'a T;
 
-    fn next(&mut self) -> Option<Self::Item>{
+    fn next(&mut self) -> Option<Self::Item> {
         self.next.map(|node| {
             self.next = node.next.as_deref();
             &node.elem
@@ -69,36 +75,36 @@ impl<T> Drop for List<T> {
     }
 }
 
-    #[cfg(test)]
-    mod test {
-        use super::List;
-        #[test]
-        fn basics() {
-            let list = List::new();
-            assert_eq!(list.head(), None);
-            
-            let list = list.append(1).append(2).append(3);
-    
-            assert_eq!(list.head(), Some(&3));
+#[cfg(test)]
+mod test {
+    use super::List;
+    #[test]
+    fn basics() {
+        let list = List::new();
+        assert_eq!(list.head(), None);
 
-            let list = list.tail();
-            assert_eq!(list.head(), Some(&2));
-    
-            let list = list.tail();
-            assert_eq!(list.head(), Some(&1));
-            
-            let list = list.tail();
-            assert_eq!(list.head(), None);
+        let list = list.append(1).append(2).append(3);
 
-            let list = list.tail();
-            assert_eq!(list.head(), None);
-        }
+        assert_eq!(list.head(), Some(&3));
 
-        fn iter(){
-            let list = List::new().append(1).append(2).append(3);
-            let mut iter = list.iter();
-            assert_eq!(iter.next(), Some(&3));
-            assert_eq!(iter.next(), Some(&2));
-            assert_eq!(iter.next(), Some(&1));
-        }
+        let list = list.tail();
+        assert_eq!(list.head(), Some(&2));
+
+        let list = list.tail();
+        assert_eq!(list.head(), Some(&1));
+
+        let list = list.tail();
+        assert_eq!(list.head(), None);
+
+        let list = list.tail();
+        assert_eq!(list.head(), None);
+    }
+
+    fn iter() {
+        let list = List::new().append(1).append(2).append(3);
+        let mut iter = list.iter();
+        assert_eq!(iter.next(), Some(&3));
+        assert_eq!(iter.next(), Some(&2));
+        assert_eq!(iter.next(), Some(&1));
+    }
 }
