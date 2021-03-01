@@ -1,8 +1,8 @@
-use std::cell::{Ref, RefCell};
+use std::cell::{Ref, RefMut, RefCell};
 use std::rc::Rc;
 
 // An easy way for us to validate if our methods make sense is if we maintain the following invariant:
-// each node should have exactly two pointers to it. Each node in the middle of the list is pointed at
+// each node should have exactly two pointers to it. Each node in the middle of the list is pointed at 
 // by its predecessor and successor, while the nodes on the ends are pointed to by the list itself.
 
 pub struct List<T> {
@@ -22,6 +22,10 @@ struct Node<T> {
     next: Link<T>,
     prev: Link<T>,
 }
+
+
+
+
 // Sometimes a type needs to be mutated while having multiple aliases. In Rust this is
 // achieved using a pattern called interior mutability. A type has interior mutability if
 // its internal state can be changed through a shared reference to it. This goes against the usual requirement that
@@ -41,6 +45,11 @@ impl<T> Node<T> {
         }))
     }
 }
+
+pub struct IntoIter<T> (List<T>);
+
+pub struct Iter<'a, T>(Option<Ref<'a, Node<T>>>);
+
 
 impl<T> List<T> {
     pub fn new() -> Self {
@@ -107,11 +116,87 @@ impl<T> List<T> {
             .as_ref()
             .map(|node| Ref::map(node.borrow(), |node| &node.elem))
     }
+
+    //tail <-> head
+    //next <-> prev
+    //front <-> back
+    //Add _mut varients for peeking 
+    pub fn push_back(&mut self, elem: T) {
+	let new_tail = Node::new(elem);
+	match self.tail.take() {
+	    Some(old_tail) => {
+		old_tail.borrow_mut().next = Some(new_tail.clone());
+		new_tail.borrow_mut().prev = Some(old_tail);
+		self.tail = Some(new_tail);
+	    }
+	    None => {
+		self.head = Some(new_tail.clone());
+		self.tail = Some(new_tail);
+	    }
+	}
+	
+    }
+
+    pub fn pop_back(&mut self) -> Option<T> {
+	self.tail.take().map(|old_tail| {
+	    //Option patterns: the usual
+	    match old_tail.borrow_mut().prev.take() {
+		Some(new_tail)=> {
+		    new_tail.borrow_mut().next.take();
+		    self.tail = Some(new_tail);
+		}
+		None => {
+		    self.head.take();
+		}
+	    }
+	    //Follow Result patterns here and use ok() to unwrap that *tasty* innards lol
+	    Rc::try_unwrap(old_tail).ok().unwrap().into_inner().elem
+	})
+    }
+
+    pub fn peek_back(&self) -> Option<Ref<T>> {
+	self.tail.as_ref().map(|node|{
+	    Ref::map(node.borrow(), |node| &node.elem)
+	})
+    }
+
+    pub fn peek_back_mut(&mut self) -> Option<RefMut<T>> {
+	self.tail.as_ref().map(|node|{
+	    RefMut::map(node.borrow_mut(), |node| &mut node.elem)
+	})
+    }
+
+    pub fn peek_front_mut(&mut self)-> Option<RefMut<T>>{
+	self.head.as_ref().map(|node|{
+	    RefMut::map(node.borrow_mut(), |node|&mut node.elem)
+	})
+    }
+    
+    pub fn into_iter(self) -> IntoIter<T> {
+        IntoIter(self)
+    }
+
+    pub fn iter(&self) -> Iter<T> {
+	Iter(self.head.as_ref().map(|head| head.borrow()))
+    }
 }
 
 impl<T> Drop for List<T> {
     fn drop(&mut self) {
         while self.pop_front().is_some() {}
+    }
+}
+
+impl<T> Iterator for IntoIter<T> {
+    type Item = T;
+    fn next(&mut self) -> Option<T> {
+	self.0.pop_front()
+    }
+}
+
+impl<T> DoubleEndedIterator for IntoIter<T> {
+    fn next_back(&mut self) -> Option<T> {
+	self.0.pop_back()
     }
 }
 
@@ -148,10 +233,31 @@ mod test {
     fn peek() {
         let mut list = List::new();
         assert!(list.peek_front().is_none());
+	assert!(list.peek_back().is_none());
+	assert!(list.peek_front_mut().is_none());
+	assert!(list.peek_back_mut().is_none());
         list.push_front(1);
         list.push_front(2);
         list.push_front(3);
 
         assert_eq!(&*list.peek_front().unwrap(), &3);
+	assert_eq!(&mut *list.peek_front_mut().unwrap(), &mut 3);
+	assert_eq!(&*list.peek_back().unwrap(), &1);
+	assert_eq!(&mut *list.peek_back_mut().unwrap(), &mut 1);
+    }
+
+    #[test]
+    fn into_iter() {
+	let mut list = List::new();
+	list.push_front(1);
+        list.push_front(2);
+        list.push_front(3);
+
+	let mut iter = list.into_iter();
+	assert_eq!(iter.next(), Some(3));
+	assert_eq!(iter.next_back(), Some(1));
+	assert_eq!(iter.next(), Some(2));
+	assert_eq!(iter.next_back(), None);
+	assert_eq!(iter.next(), None);
     }
 }
