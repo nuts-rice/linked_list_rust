@@ -1,4 +1,6 @@
 //Singly linked queue
+
+
 //Follow basic patterns of stack except with LIFO: remember, queues are like lines
 //Since this is singly-linked, we can actually move either operation to the end
 
